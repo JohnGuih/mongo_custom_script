@@ -1,0 +1,6 @@
+{
+    "mongo_host": "MONGO_HOST",
+    "mongo_user": "MONGO_USER",
+    "mongo_password": "MONGO_PASSWORD",
+    "output_dir": "OUTPUT_DIR"
+}
