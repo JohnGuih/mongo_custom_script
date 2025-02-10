@@ -10,7 +10,7 @@ MONGOTOOLS_BIN_PATH = "mongo_tools/bin"
 def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path):
     """Dumps a database and its collections"""
 
-    db_output_dir = os.path.join(output_dir, db_name)
+    db_output_dir = os.path.join(output_dir)
     os.makedirs(db_output_dir, exist_ok=True)
 
     if not collections:
@@ -24,13 +24,12 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path):
     else:
         print(f"Dumping specific collections from database: {db_name}")
         for collection in collections:
-            collection_output_dir = os.path.join(db_output_dir)
             command = [
                 mongodump_path,
                 "--uri", mongo_uri,
                 "--db", db_name,
                 "--collection", collection,
-                "--out", collection_output_dir,
+                "--out", db_output_dir,
             ]
             try:
                 subprocess.run(command, check=True)
@@ -115,11 +114,6 @@ def main():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     mongodump_path = os.path.join(script_dir, MONGOTOOLS_BIN_PATH, "mongodump")
-
-    print(db_name)
-    print(mongo_uri)
-    print(output_root_dir)
-    print(mongodump_path)
 
     for db_name, collections in collections_dict.items():
         dump_database(db_name, collections, mongo_uri, output_root_dir, mongodump_path)
