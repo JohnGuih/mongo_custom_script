@@ -5,7 +5,7 @@ a = Analysis(
     ['dumpByString.py'],
     pathex=[],
     binaries=[],
-    datas=[('mongo_tools/bin/mongodump.exe', 'mongo_tools/bin/')],
+    datas=[('mongo_tools/bin', 'mongo_tools/bin')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
