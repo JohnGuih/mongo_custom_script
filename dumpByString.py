@@ -21,14 +21,6 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path, m
             "--db", db_name,
             "--out", db_output_dir,
         ]
-        mirror_command = [
-            mongodump_path,
-            "--uri", mongo_uri,
-            "--db", db_name,
-            "--out", db_mirror_dir,
-            "--noIndex",
-            "--noOplog"
-        ]
     else:
         print(f"Dumping specific collections from database: {db_name}")
         for collection in collections:
@@ -39,23 +31,27 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path, m
                 "--collection", collection,
                 "--out", db_output_dir,
             ]
-            mirror_command = [
-                mongodump_path,
-                "--uri", mongo_uri,
-                "--db", db_name,
-                "--collection", collection,
-                "--out", db_mirror_dir,
-                "--noIndex",
-                "--noOplog"
-            ]
-            try:
-                subprocess.run(command, check=True)
-                subprocess.run(mirror_command, check=True)
-                print(f"Successfully dumped {db_name}.{collection}")
-            except subprocess.CalledProcessError as e:
-                print(f"Error dumping {db_name}.{collection}")
-                exit(1)
-        return
+
+    try:
+        subprocess.run(command, check=True)  # Run the initial mongodump
+        print(f"Successfully dumped {db_name}")
+
+        # Now, copy the metadata files to the mirror directory
+        for root, _, files in os.walk(db_output_dir):
+            for file in files:
+                if file.endswith(".metadata.json"):  # Only copy metadata files
+                    src_path = os.path.join(root, file)
+                    dst_path = os.path.join(db_mirror_dir, os.path.relpath(src_path, db_output_dir)) #maintain the folder structure in the mirror folder
+                    os.makedirs(os.path.dirname(dst_path), exist_ok=True) #create the folder structure in the mirror folder if not exist
+                    shutil.copy2(src_path, dst_path) #copy the metadata with all metadata
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error dumping {db_name}: {e}")
+        exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        exit(1)
+    return
 
 
 def main():
