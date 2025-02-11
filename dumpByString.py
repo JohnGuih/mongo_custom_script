@@ -7,11 +7,11 @@ import urllib.parse
 
 MONGOTOOLS_BIN_PATH = "mongo_tools/bin"
 
-def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path):
-    """Dumps a database and its collections"""
-
+def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path, mirror_dir):
     db_output_dir = os.path.join(output_dir)
     os.makedirs(db_output_dir, exist_ok=True)
+    db_mirror_dir = os.path.join(mirror_dir)
+    os.makedirs(db_mirror_dir, exist_ok=True)
 
     if not collections:
         print(f"Dumping ALL collections from database: {db_name}")
@@ -20,6 +20,14 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path):
             "--uri", mongo_uri,
             "--db", db_name,
             "--out", db_output_dir,
+        ]
+        mirror_command = [
+            mongodump_path,
+            "--uri", mongo_uri,
+            "--db", db_name,
+            "--out", db_mirror_dir,
+            "--noIndex",
+            "--noOplog"
         ]
     else:
         print(f"Dumping specific collections from database: {db_name}")
@@ -31,8 +39,18 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path):
                 "--collection", collection,
                 "--out", db_output_dir,
             ]
+            mirror_command = [
+                mongodump_path,
+                "--uri", mongo_uri,
+                "--db", db_name,
+                "--collection", collection,
+                "--out", db_mirror_dir,
+                "--noIndex",
+                "--noOplog"
+            ]
             try:
                 subprocess.run(command, check=True)
+                subprocess.run(mirror_command, check=True)
                 print(f"Successfully dumped {db_name}.{collection}")
             except subprocess.CalledProcessError as e:
                 print(f"Error dumping {db_name}.{collection}")
@@ -48,7 +66,6 @@ def main():
     parser.add_argument("-d", "--dbs", required=True, help="Path to the text file containing databases and collections.")
 
     args = parser.parse_args()
-
 
     if args.config:
         config_path = args.config
@@ -68,8 +85,8 @@ def main():
         OUTPUT_DIR = config.get("output_dir")
 
         if not all([MONGO_HOST, MONGO_USER, MONGO_PASSWORD, OUTPUT_DIR]):
-           print("Error: All MongoDB config parameters must be defined in the json file")
-           exit(1)
+            print("Error: All MongoDB config parameters must be defined in the json file")
+            exit(1)
         mongo_uri = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}"
 
     elif args.uri:
@@ -85,8 +102,8 @@ def main():
             print("Error: Invalid MongoDB connection URI.")
             exit(1)
         if not all([MONGO_USER, MONGO_PASSWORD, MONGO_HOST, OUTPUT_DIR]):
-           print("Error: All MongoDB config parameters must be defined in the connection string")
-           exit(1)
+            print("Error: All MongoDB config parameters must be defined in the connection string")
+            exit(1)
 
     dbs_path = args.dbs
 
@@ -97,10 +114,11 @@ def main():
         print(f"Error: Databases and collections file '{dbs_path}' not found.")
         exit(1)
 
-
     DATE = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_root_dir = os.path.join(OUTPUT_DIR, f"mongodump_{DATE}")
+    mirror_root_dir = os.path.join(OUTPUT_DIR, f"mongodump_{DATE}_mirror")
     os.makedirs(output_root_dir, exist_ok=True)
+    os.makedirs(mirror_root_dir, exist_ok=True)
 
     print("Starting MongoDB dump...")
 
@@ -116,7 +134,7 @@ def main():
     mongodump_path = os.path.join(script_dir, MONGOTOOLS_BIN_PATH, "mongodump")
 
     for db_name, collections in collections_dict.items():
-        dump_database(db_name, collections, mongo_uri, output_root_dir, mongodump_path)
+        dump_database(db_name, collections, mongo_uri, output_root_dir, mongodump_path, mirror_root_dir)
 
     print("MongoDB dump completed.")
 
