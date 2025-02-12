@@ -6,6 +6,8 @@ import argparse
 from datetime import datetime
 import urllib.parse
 
+import bson
+
 MONGOTOOLS_BIN_PATH = "mongo_tools/bin"
 
 def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path, mirror_dir):
@@ -40,11 +42,14 @@ def dump_database(db_name, collections, mongo_uri, output_dir, mongodump_path, m
         # Now, copy the metadata files to the mirror directory
         for root, _, files in os.walk(db_output_dir):
             for file in files:
-                if file.endswith(".metadata.json"):  # Only copy metadata files
+                if file.endswith(".metadata.json"):  # Only copy metadata files and create a empty bson
                     src_path = os.path.join(root, file)
                     dst_path = os.path.join(db_mirror_dir, os.path.relpath(src_path, db_output_dir)) #maintain the folder structure in the mirror folder
                     os.makedirs(os.path.dirname(dst_path), exist_ok=True) #create the folder structure in the mirror folder if not exist
                     shutil.copy2(src_path, dst_path) #copy the metadata with all metadata
+                    bson_path = os.path.splitext(dst_path)[0] + ".bson"  # Same name, .bson extension
+                    with open(bson_path, "wb") as f:  # Open in binary write mode
+                        f.write(bson.dumps({})) #write a empty dictionary to the bson file
 
     except subprocess.CalledProcessError as e:
         print(f"Error dumping {db_name}: {e}")
