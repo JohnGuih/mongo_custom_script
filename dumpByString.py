@@ -5,7 +5,6 @@ import json
 import argparse
 from datetime import datetime
 import urllib.parse
-
 import bson
 
 MONGOTOOLS_BIN_PATH = "mongo_tools/bin"
